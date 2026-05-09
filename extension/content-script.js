@@ -5,7 +5,7 @@ let notifyTimer = null;
 function hash(value) {
   let h = 0;
   for (let i = 0; i < value.length; i += 1) {
-    h = Math.imul(31, h) + value.charCodeAt(i) | 0;
+    h = (Math.imul(31, h) + value.charCodeAt(i)) | 0;
   }
   return String(h);
 }
@@ -13,13 +13,10 @@ function hash(value) {
 function extractGoogleDocText() {
   const title = document.title.replace(/ - Google Docs$/, '');
   const lineNodes = Array.from(document.querySelectorAll('.kix-lineview-text-block, .kix-wordhtmlgenerator-word-node'));
-  const lineText = lineNodes.map((node) => node.textContent || '').join('
-').trim();
+  const lineText = lineNodes.map((node) => node.textContent || '').join('\n').trim();
   const fallback = document.body?.innerText || '';
-  const documentText = (lineText || fallback).replace(/
-{3,}/g, '
+  const documentText = (lineText || fallback).replace(/\n{3,}/g, '\n\n').slice(0, MAX_TEXT_LENGTH);
 
-').slice(0, MAX_TEXT_LENGTH);
   return {
     surface: 'google_docs',
     url: window.location.href,
@@ -40,12 +37,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 function notifyChanged() {
   const context = extractGoogleDocText();
-  const nextHash = hash(`${context.title}
-${context.document_text}
-${context.selected_text || ''}`);
+  const nextHash = hash(`${context.title}\n${context.document_text}\n${context.selected_text || ''}`);
   if (nextHash === lastHash) return;
+
   lastHash = nextHash;
-  chrome.runtime.sendMessage({ type: 'DOCS_COACH_CONTEXT_CHANGED', payload: { title: context.title, hash: nextHash } }).catch(() => {});
+  chrome.runtime
+    .sendMessage({ type: 'DOCS_COACH_CONTEXT_CHANGED', payload: { title: context.title, hash: nextHash } })
+    .catch(() => {});
 }
 
 const observer = new MutationObserver(() => {
