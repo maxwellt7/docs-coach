@@ -1,0 +1,14 @@
+{
+  "name": "docs-coach",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Chrome extension, Vercel dashboard, and Railway API starter for business-documentation coaching.",
+  "packageManager": "pnpm@10.4.1",
+  "scripts": {
+    "dev:web": "pnpm --dir apps/web dev",
+    "build:web": "pnpm --dir apps/web build",
+    "check:web": "pnpm --dir apps/web check",
+    "dev:api": "cd apps/api && uvicorn app.main:app --reload --port 8000",
+    "package:extension": "cd extension && zip -r ../docs-coach-extension.zip . -x \"*.DS_Store\""
+  }
+}

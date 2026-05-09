@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Docs Coach</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <header>
+        <p class="eyebrow">Docs Coach</p>
+        <h1>Business review rail</h1>
+        <p class="lede">Review SOPs, contracts, policies, and operating docs with sequenced business-documentation lenses.</p>
+      </header>
+
+      <label class="field">
+        <span>API URL</span>
+        <input id="apiUrl" value="http://localhost:8000" />
+      </label>
+
+      <div class="controls">
+        <select id="reviewMode">
+          <option value="auto">Auto route</option>
+          <option value="sop">SOP</option>
+          <option value="contract">Contract</option>
+          <option value="policy">Policy</option>
+          <option value="proposal">Proposal</option>
+          <option value="general">General</option>
+        </select>
+        <button id="reviewButton">Review visible doc</button>
+      </div>
+
+      <section id="status" class="status">Open a Google Doc and click review.</section>
+      <section id="results" class="results"></section>
+    </main>
+    <script src="panel.js"></script>
+  </body>
+</html>
