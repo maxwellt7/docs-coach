@@ -53,3 +53,23 @@ def test_suggestion_anchor_fields_default_to_none():
     )
     assert s.paragraph_index is None
     assert s.anchor_snippet is None
+
+
+def test_document_context_rejects_all_whitespace_paragraphs():
+    with pytest.raises(ValidationError):
+        DocumentContext(paragraphs=['', '  ', '\t'])
+
+
+def test_document_context_syncs_document_text_from_paragraphs():
+    ctx = DocumentContext(
+        document_text='ignored\n\nignored2',
+        paragraphs=['Real para.'],
+    )
+    assert ctx.paragraphs == ['Real para.']
+    assert ctx.document_text == 'Real para.'
+
+
+def test_document_context_strips_whitespace_from_provided_paragraphs():
+    ctx = DocumentContext(paragraphs=['  one  ', '', 'two', '   '])
+    assert ctx.paragraphs == ['one', 'two']
+    assert ctx.document_text == 'one\n\ntwo'

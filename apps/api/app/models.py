@@ -17,15 +17,26 @@ class DocumentContext(BaseModel):
 
     @model_validator(mode='after')
     def derive_paragraphs(self):
+        # Strip and drop empties from any provided paragraphs first.
+        if self.paragraphs:
+            self.paragraphs = [p.strip() for p in self.paragraphs if p.strip()]
+
+        # If paragraphs is empty but we have document_text, derive paragraphs from it.
         if not self.paragraphs and self.document_text:
             self.paragraphs = [
                 p.strip()
                 for p in self.document_text.split('\n\n')
                 if p.strip()
             ]
-        if not self.document_text and self.paragraphs:
+
+        # Keep document_text in sync with paragraphs (paragraphs is canonical).
+        # This ensures downstream code that still reads document_text sees the
+        # same content as code that iterates paragraphs.
+        if self.paragraphs:
             self.document_text = '\n\n'.join(self.paragraphs)
-        if not self.paragraphs and not self.document_text:
+
+        # If, after all derivation, we still have no paragraphs, the payload is empty.
+        if not self.paragraphs:
             raise ValueError(
                 'Either document_text or paragraphs must be provided.'
             )
