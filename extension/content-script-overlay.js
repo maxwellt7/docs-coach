@@ -460,6 +460,13 @@
     closeCard();
   });
 
+  // Close the card on Escape.
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && openCardSuggestionId) {
+      closeCard();
+    }
+  });
+
   // Listen for messages from the side panel via the background relay.
   chrome.runtime.onMessage.addListener((message) => {
     if (!message || typeof message.type !== 'string') return;
@@ -471,5 +478,5 @@
   });
 
   // Expose for debugging / manual testing.
-  window.__docsCoach = { renderPins, clearPins };
+  window.__docsCoach = { renderPins, clearPins, openCard };
 })();
