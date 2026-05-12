@@ -42,7 +42,7 @@ function extractFlatFallback() {
 }
 
 function extractGoogleDoc() {
-  const title = document.title.replace(/ - Google Docs$/, '');
+  const title = String(document.title || '').replace(/ - Google Docs$/, '');
   const renderers = Array.from(
     document.querySelectorAll('.kix-paragraphrenderer')
   );
@@ -90,7 +90,21 @@ function extractGoogleDoc() {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'DOCS_COACH_GET_CONTEXT') {
-    sendResponse(extractGoogleDoc());
+    try {
+      sendResponse(extractGoogleDoc());
+    } catch (error) {
+      console.warn('[Docs Coach] extraction failed:', error);
+      sendResponse({
+        surface: 'google_docs',
+        url: window.location.href,
+        title: String(document.title || ''),
+        paragraphs: [],
+        selected_text: null,
+        review_mode: 'auto',
+        _anchors_available: false,
+        _error: error?.message || String(error),
+      });
+    }
     return true;
   }
   return false;
