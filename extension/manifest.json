@@ -23,7 +23,8 @@
         "https://docs.google.com/document/d/*"
       ],
       "js": [
-        "content-script.js"
+        "content-script.js",
+        "content-script-overlay.js"
       ],
       "run_at": "document_idle"
     }
