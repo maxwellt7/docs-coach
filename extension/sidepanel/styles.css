@@ -22,3 +22,29 @@ button:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 rgba(31,3
 .card h2 { margin: 7px 0 8px; font-size: 15px; line-height: 1.25; }
 .card p { margin: 0 0 8px; color: #5d5a50; font-size: 12px; line-height: 1.5; }
 .revision { border-top: 1px solid rgba(31,36,29,.12); padding-top: 8px; color: #1f241d !important; }
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin: 8px 0 12px;
+}
+
+.banner {
+  background: #fff4e5;
+  border: 1px solid #f0c674;
+  color: #5a3e00;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.summary .score {
+  margin: 8px 0 12px;
+  padding: 12px;
+  background: #1a1a1a;
+  color: #f7eed8;
+  border-radius: 8px;
+}

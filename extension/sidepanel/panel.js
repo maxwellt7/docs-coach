@@ -1,15 +1,36 @@
 const apiUrl = document.getElementById('apiUrl');
 const reviewMode = document.getElementById('reviewMode');
 const reviewButton = document.getElementById('reviewButton');
+const pinToggle = document.getElementById('pinOverlayToggle');
+const banner = document.getElementById('banner');
 const statusEl = document.getElementById('status');
+const summaryEl = document.getElementById('summary');
 const resultsEl = document.getElementById('results');
 
-chrome.storage.sync.get(['docsCoachApiUrl'], ({ docsCoachApiUrl }) => {
-  if (docsCoachApiUrl) apiUrl.value = docsCoachApiUrl;
-});
+let lastSuggestions = [];
+let canvasDetected = false;
+
+chrome.storage.sync.get(
+  ['docsCoachApiUrl', 'docsCoachPinOverlay'],
+  ({ docsCoachApiUrl, docsCoachPinOverlay }) => {
+    if (docsCoachApiUrl) apiUrl.value = docsCoachApiUrl;
+    if (typeof docsCoachPinOverlay === 'boolean') {
+      pinToggle.checked = docsCoachPinOverlay;
+    }
+    syncResultsVisibility();
+  }
+);
 
 apiUrl.addEventListener('change', () => {
-  chrome.storage.sync.set({ docsCoachApiUrl: apiUrl.value.replace(/\/$/, '') });
+  chrome.storage.sync.set({
+    docsCoachApiUrl: apiUrl.value.replace(/\/$/, ''),
+  });
+});
+
+pinToggle.addEventListener('change', () => {
+  chrome.storage.sync.set({ docsCoachPinOverlay: pinToggle.checked });
+  syncResultsVisibility();
+  pushSuggestionsToOverlay();
 });
 
 chrome.runtime.onMessage.addListener((message) => {
@@ -21,7 +42,7 @@ chrome.runtime.onMessage.addListener((message) => {
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id || !tab.url?.startsWith('https://docs.google.com/document/')) {
-    throw new Error('Open a Google Docs document before running a review.');
+    throw new Error('Open a Google Doc before running a review.');
   }
   return tab;
 }
@@ -31,44 +52,114 @@ async function getContext() {
   return chrome.tabs.sendMessage(tab.id, { type: 'DOCS_COACH_GET_CONTEXT' });
 }
 
-function render(data) {
-  const cards = data.suggestions.map((item) => `
-    <article class="card ${item.severity}">
-      <div class="meta">${item.severity} · ${item.lens}</div>
-      <h2>${item.title}</h2>
-      <p>${item.why_it_matters}</p>
-      <p class="revision"><strong>Suggested revision:</strong> ${item.recommended_revision}</p>
-      ${item.follow_up_question ? `<p><strong>Question:</strong> ${item.follow_up_question}</p>` : ''}
-    </article>
-  `).join('');
+function showBanner(text) {
+  banner.textContent = text;
+  banner.hidden = false;
+}
 
-  resultsEl.innerHTML = `
+function hideBanner() {
+  banner.hidden = true;
+  banner.textContent = '';
+}
+
+function shouldUseOverlay() {
+  return pinToggle.checked && !canvasDetected;
+}
+
+function syncResultsVisibility() {
+  resultsEl.hidden = shouldUseOverlay();
+}
+
+function renderSummary(data) {
+  summaryEl.innerHTML = `
     <section class="score">
       <div class="meta">${data.route.document_type} · ${data.route.knowledge_bases.join(' → ')}</div>
       <strong>${data.readiness_score}/10</strong>
-      <p>${data.executive_summary}</p>
-      <p>${data.next_best_action}</p>
+      <p>${escapeHtml(data.executive_summary)}</p>
+      <p>${escapeHtml(data.next_best_action)}</p>
     </section>
-    ${cards}
   `;
+}
+
+function renderCardList(suggestions) {
+  const cards = suggestions
+    .map(
+      (item) => `
+        <article class="card ${escapeAttr(item.severity)}">
+          <div class="meta">${escapeHtml(item.severity)} · ${escapeHtml(item.lens)}</div>
+          <h2>${escapeHtml(item.title)}</h2>
+          <p>${escapeHtml(item.why_it_matters)}</p>
+          <p class="revision"><strong>Suggested revision:</strong> ${escapeHtml(item.recommended_revision)}</p>
+          ${item.follow_up_question ? `<p><strong>Question:</strong> ${escapeHtml(item.follow_up_question)}</p>` : ''}
+        </article>
+      `
+    )
+    .join('');
+  resultsEl.innerHTML = cards;
+}
+
+function pushSuggestionsToOverlay() {
+  if (shouldUseOverlay()) {
+    chrome.runtime
+      .sendMessage({
+        type: 'DOCS_COACH_RENDER_PINS',
+        payload: { suggestions: lastSuggestions },
+      })
+      .catch(() => {});
+  } else {
+    chrome.runtime
+      .sendMessage({ type: 'DOCS_COACH_CLEAR_PINS' })
+      .catch(() => {});
+    renderCardList(lastSuggestions);
+  }
+}
+
+function escapeHtml(value) {
+  if (value == null) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/\s+/g, '-');
 }
 
 reviewButton.addEventListener('click', async () => {
   reviewButton.disabled = true;
   statusEl.textContent = 'Collecting Google Docs context…';
+  summaryEl.innerHTML = '';
   resultsEl.innerHTML = '';
+  hideBanner();
+  canvasDetected = false;
   try {
     const context = await getContext();
+    if (Array.isArray(context.paragraphs) && context.paragraphs.length === 0) {
+      canvasDetected = true;
+      showBanner(
+        "This doc uses Google's canvas renderer — in-doc pins aren't " +
+          'available. Falling back to the card list below.'
+      );
+    }
     const base = apiUrl.value.replace(/\/$/, '');
     const response = await fetch(`${base}/api/document-review`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...context, review_mode: reviewMode.value }),
+      body: JSON.stringify({
+        ...context,
+        review_mode: reviewMode.value,
+      }),
     });
     if (!response.ok) throw new Error(`API returned ${response.status}`);
     const data = await response.json();
     statusEl.textContent = 'Review complete.';
-    render(data);
+    renderSummary(data);
+    lastSuggestions = data.suggestions || [];
+    syncResultsVisibility();
+    pushSuggestionsToOverlay();
   } catch (error) {
     statusEl.textContent = error.message || String(error);
   } finally {

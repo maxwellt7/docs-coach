@@ -31,8 +31,15 @@
         <button id="reviewButton">Review visible doc</button>
       </div>
 
+      <label class="toggle">
+        <input type="checkbox" id="pinOverlayToggle" checked />
+        <span>Show suggestions as in-doc pins</span>
+      </label>
+
+      <section id="banner" class="banner" hidden></section>
       <section id="status" class="status">Open a Google Doc and click review.</section>
-      <section id="results" class="results"></section>
+      <section id="summary" class="summary"></section>
+      <section id="results" class="results" hidden></section>
     </main>
     <script src="panel.js"></script>
   </body>
