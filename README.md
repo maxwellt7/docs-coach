@@ -12,7 +12,7 @@ The project has three working surfaces: a React/Vite dashboard, a FastAPI review
 |---|---|---|
 | Web dashboard | Ready for Vercel | Built with React, TypeScript, Vite, Tailwind CSS 4, and shadcn/ui components. |
 | API backend | Ready for Railway | FastAPI exposes `/health` and `POST /api/document-review`. |
-| Chrome extension | Load-unpacked MVP | Captures Google Docs context through a content script and sends it to the backend. |
+| Chrome extension | Load-unpacked MVP | Captures Google Docs context, sends it to the backend, and renders suggestions as colored pins in the right gutter of the doc; clicking a pin opens a coaching card with a one-click clipboard copy. Falls back to a sidebar card list for canvas-rendered docs. |
 | Review logic | Deterministic starter | Replace `apps/api/app/services/reviewer.py` with the real `maxmayes-chat` orchestration in the next implementation phase. |
 | CI workflow | Template included | The workflow template is stored at `docs/github_actions_ci_template.yml` because this GitHub token could not create `.github/workflows/*` directly. |
 
@@ -80,6 +80,19 @@ The starter has been validated with frontend, backend, and extension checks. Re-
 | Backend import and routes | `cd apps/api && python -c "from app.main import app; print([route.path for route in app.routes])"` |
 | Extension JavaScript syntax | `node --check extension/content-script.js && node --check extension/background.js && node --check extension/sidepanel/panel.js` |
 | Manifest JSON validation | `python -m json.tool extension/manifest.json` |
+
+## In-doc pins
+
+After running a review, Docs Coach renders each suggestion as a colored
+pin in the right gutter of the open Google Doc, anchored to the paragraph
+the suggestion targets. Pin colors follow severity (red = high,
+amber = medium, blue = low). Clicking a pin opens a card with the full
+suggestion plus an **Apply** button that copies the recommended revision
+to your clipboard.
+
+If a doc uses Google's canvas renderer, pins aren't available and the
+extension falls back to the in-panel card list. Toggle **Show
+suggestions as in-doc pins** in the side panel to switch between modes.
 
 ## API contract
 
