@@ -1,6 +1,13 @@
-const MAX_TEXT_LENGTH = 30000;
+// Module-scoped registry of paragraph DOM anchors keyed by index.
+// Populated each time extractGoogleDoc() runs; consumed by the
+// overlay module to position pins.
+const MAX_PARAGRAPH_LENGTH = 4000;
+const MAX_PARAGRAPHS = 200;
 let lastHash = '';
 let notifyTimer = null;
+window.__docsCoachState = window.__docsCoachState || {
+  paragraphAnchors: [],
+};
 
 function hash(value) {
   let h = 0;
@@ -10,18 +17,37 @@ function hash(value) {
   return String(h);
 }
 
-function extractGoogleDocText() {
+function extractGoogleDoc() {
   const title = document.title.replace(/ - Google Docs$/, '');
-  const lineNodes = Array.from(document.querySelectorAll('.kix-lineview-text-block, .kix-wordhtmlgenerator-word-node'));
-  const lineText = lineNodes.map((node) => node.textContent || '').join('\n').trim();
-  const fallback = document.body?.innerText || '';
-  const documentText = (lineText || fallback).replace(/\n{3,}/g, '\n\n').slice(0, MAX_TEXT_LENGTH);
+  const renderers = Array.from(
+    document.querySelectorAll('.kix-paragraphrenderer')
+  );
+
+  const paragraphs = [];
+  const paragraphAnchors = [];
+
+  for (const renderer of renderers) {
+    if (paragraphs.length >= MAX_PARAGRAPHS) break;
+    const lineBlocks = Array.from(
+      renderer.querySelectorAll('.kix-lineview-text-block')
+    );
+    const text = lineBlocks
+      .map((n) => n.textContent || '')
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!text) continue;
+    paragraphs.push(text.slice(0, MAX_PARAGRAPH_LENGTH));
+    paragraphAnchors.push(lineBlocks[lineBlocks.length - 1] || renderer);
+  }
+
+  window.__docsCoachState.paragraphAnchors = paragraphAnchors;
 
   return {
     surface: 'google_docs',
     url: window.location.href,
     title,
-    document_text: documentText || 'No editable Google Docs text was detected. Try selecting text or connecting the Google Docs API ingestion path.',
+    paragraphs,
     selected_text: window.getSelection()?.toString()?.slice(0, 12000) || null,
     review_mode: 'auto',
   };
@@ -29,20 +55,24 @@ function extractGoogleDocText() {
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'DOCS_COACH_GET_CONTEXT') {
-    sendResponse(extractGoogleDocText());
+    sendResponse(extractGoogleDoc());
     return true;
   }
   return false;
 });
 
 function notifyChanged() {
-  const context = extractGoogleDocText();
-  const nextHash = hash(`${context.title}\n${context.document_text}\n${context.selected_text || ''}`);
+  const context = extractGoogleDoc();
+  const nextHash = hash(
+    `${context.title}\n${context.paragraphs.join('\n')}\n${context.selected_text || ''}`
+  );
   if (nextHash === lastHash) return;
-
   lastHash = nextHash;
   chrome.runtime
-    .sendMessage({ type: 'DOCS_COACH_CONTEXT_CHANGED', payload: { title: context.title, hash: nextHash } })
+    .sendMessage({
+      type: 'DOCS_COACH_CONTEXT_CHANGED',
+      payload: { title: context.title, hash: nextHash },
+    })
     .catch(() => {});
 }
 
@@ -51,5 +81,9 @@ const observer = new MutationObserver(() => {
   notifyTimer = setTimeout(notifyChanged, 2500);
 });
 
-observer.observe(document.body, { subtree: true, childList: true, characterData: true });
+observer.observe(document.body, {
+  subtree: true,
+  childList: true,
+  characterData: true,
+});
 setTimeout(notifyChanged, 1500);
