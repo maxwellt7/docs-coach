@@ -73,8 +73,8 @@ function syncResultsVisibility() {
 function renderSummary(data) {
   summaryEl.innerHTML = `
     <section class="score">
-      <div class="meta">${data.route.document_type} · ${data.route.knowledge_bases.join(' → ')}</div>
-      <strong>${data.readiness_score}/10</strong>
+      <div class="meta">${escapeHtml(data.route.document_type)} · ${escapeHtml(data.route.knowledge_bases.join(' → '))}</div>
+      <strong>${escapeHtml(String(data.readiness_score))}/10</strong>
       <p>${escapeHtml(data.executive_summary)}</p>
       <p>${escapeHtml(data.next_best_action)}</p>
     </section>
