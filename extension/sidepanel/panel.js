@@ -137,7 +137,12 @@ reviewButton.addEventListener('click', async () => {
   canvasDetected = false;
   try {
     const context = await getContext();
-    if (Array.isArray(context.paragraphs) && context.paragraphs.length === 0) {
+    if (!context || !Array.isArray(context.paragraphs) || context.paragraphs.length === 0) {
+      throw new Error(
+        'Could not read any text from this document. Open a Google Doc with content and try again.'
+      );
+    }
+    if (context._anchors_available === false) {
       canvasDetected = true;
       showBanner(
         "This doc uses Google's canvas renderer — in-doc pins aren't " +
@@ -145,11 +150,13 @@ reviewButton.addEventListener('click', async () => {
       );
     }
     const base = apiUrl.value.replace(/\/$/, '');
+    // Strip extension-internal fields before sending to the API.
+    const { _anchors_available, ...payload } = context;
     const response = await fetch(`${base}/api/document-review`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        ...context,
+        ...payload,
         review_mode: reviewMode.value,
       }),
     });
