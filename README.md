@@ -12,7 +12,7 @@ The project has three working surfaces: a React/Vite dashboard, a FastAPI review
 |---|---|---|
 | Web dashboard | Ready for Vercel | Built with React, TypeScript, Vite, Tailwind CSS 4, and shadcn/ui components. |
 | API backend | Ready for Railway | FastAPI exposes `/health` and `POST /api/document-review`. |
-| Chrome extension | Load-unpacked MVP | Captures Google Docs context, sends it to the backend, and renders suggestions as colored pins in the right gutter of the doc; clicking a pin opens a coaching card with a one-click clipboard copy. Falls back to a sidebar card list for canvas-rendered docs. |
+| Chrome extension | Load-unpacked MVP | Captures Google Docs context and renders coaching cards in the side panel. On Kix-rendered docs, shows colored margin pins linked to paragraphs. On any doc (canvas or Kix), per-suggestion **Insert** replaces the paragraph in-place via the Google Docs API, **Post comment** creates a native Google comment, and **Copy** sends the revision to the clipboard. Sign-in handled in-extension via `chrome.identity`. |
 | Review logic | Deterministic starter | Replace `apps/api/app/services/reviewer.py` with the real `maxmayes-chat` orchestration in the next implementation phase. |
 | CI workflow | Template included | The workflow template is stored at `docs/github_actions_ci_template.yml` because this GitHub token could not create `.github/workflows/*` directly. |
 
@@ -93,6 +93,26 @@ to your clipboard.
 If a doc uses Google's canvas renderer, pins aren't available and the
 extension falls back to the in-panel card list. Toggle **Show
 suggestions as in-doc pins** in the side panel to switch between modes.
+
+## In-doc actions (Insert / Post comment / Copy)
+
+Once you've completed the [Google Cloud + OAuth setup](docs/google-oauth-setup.md)
+and signed in via the side panel, each suggestion card has three
+independent actions:
+
+- **Insert ↩** — replace the targeted paragraph in the Google Doc with
+  the recommended revision text. Undo with ⌘Z in the doc.
+- **Post comment 💬** — create a native Google comment anchored to the
+  targeted paragraph. Appears in the doc's normal comments sidebar.
+- **Copy 📋** — copy the recommended revision to the clipboard. Works
+  without sign-in.
+
+The Insert and Post comment buttons are disabled until you sign in to
+Google. The Copy button is always enabled.
+
+These actions live on the side-panel cards. On Kix-rendered docs, you
+can toggle the in-doc pin overlay off to see the card list. On
+canvas-rendered docs the card list appears automatically.
 
 ## API contract
 
