@@ -180,6 +180,119 @@
     });
   }
 
+  // --- HTTP helpers ----------------------------------------------------------
+
+  async function authedFetch(url, options) {
+    let token = await getAuthToken(false);
+    if (!token) {
+      token = await getAuthToken(true);
+    }
+    if (!token) {
+      throw new Error('Not signed in');
+    }
+    const headers = Object.assign({}, options?.headers || {}, {
+      Authorization: 'Bearer ' + token,
+      'Content-Type': 'application/json',
+    });
+    let response = await fetch(url, Object.assign({}, options, { headers }));
+
+    // Token might have just expired; retry once with a fresh one.
+    if (response.status === 401) {
+      await new Promise((resolve) => {
+        chrome.identity.removeCachedAuthToken({ token }, () => resolve());
+      });
+      token = await getAuthToken(true);
+      if (!token) throw new Error('Not signed in');
+      headers.Authorization = 'Bearer ' + token;
+      response = await fetch(url, Object.assign({}, options, { headers }));
+    }
+
+    return response;
+  }
+
+  /**
+   * GET https://docs.googleapis.com/v1/documents/{docId}
+   */
+  async function fetchDocStructure(docId) {
+    const res = await authedFetch(
+      'https://docs.googleapis.com/v1/documents/' + encodeURIComponent(docId),
+      { method: 'GET' },
+    );
+    if (!res.ok) {
+      throw await apiError(res, 'fetch doc structure');
+    }
+    return res.json();
+  }
+
+  /**
+   * Replace the text in [startIndex, endIndex) with newText.
+   * Keeps the trailing newline by deleting through endIndex - 1.
+   */
+  async function replaceParagraph(docId, range, newText) {
+    const body = {
+      requests: [
+        {
+          deleteContentRange: {
+            range: {
+              startIndex: range.startIndex,
+              endIndex: range.endIndex - 1,
+            },
+          },
+        },
+        {
+          insertText: {
+            location: { index: range.startIndex },
+            text: newText,
+          },
+        },
+      ],
+    };
+    const res = await authedFetch(
+      'https://docs.googleapis.com/v1/documents/' +
+        encodeURIComponent(docId) +
+        ':batchUpdate',
+      { method: 'POST', body: JSON.stringify(body) },
+    );
+    if (!res.ok) {
+      throw await apiError(res, 'insert');
+    }
+    return res.json();
+  }
+
+  /**
+   * Create a Drive comment anchored to a paragraph range in a Doc.
+   */
+  async function postComment(docId, range, content) {
+    const anchor = JSON.stringify({
+      r: 'head',
+      a: [{ txt: { o: range.startIndex, l: range.endIndex - range.startIndex } }],
+    });
+    const res = await authedFetch(
+      'https://www.googleapis.com/drive/v3/files/' +
+        encodeURIComponent(docId) +
+        '/comments?fields=id',
+      { method: 'POST', body: JSON.stringify({ content, anchor }) },
+    );
+    if (!res.ok) {
+      throw await apiError(res, 'post comment');
+    }
+    return res.json();
+  }
+
+  async function apiError(res, label) {
+    let body = '';
+    try {
+      body = await res.text();
+    } catch (_) {
+      // ignore
+    }
+    const err = new Error(
+      label + ' failed: ' + res.status + (body ? ' — ' + body.slice(0, 200) : ''),
+    );
+    err.status = res.status;
+    return err;
+  }
+
   // --- exports ---------------------------------------------------------------
 
   root.DocsCoachGoogleApi = {
@@ -189,5 +302,8 @@
     getAuthToken,
     signOut,
     getUserEmail,
+    fetchDocStructure,
+    replaceParagraph,
+    postComment,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
