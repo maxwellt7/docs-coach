@@ -7,7 +7,7 @@ const vm = require('node:vm');
 // Load google-api.js into a sandbox that exposes `globalThis` as its root.
 const modulePath = path.join(__dirname, '..', 'sidepanel', 'google-api.js');
 const source = fs.readFileSync(modulePath, 'utf8');
-const context = { console };
+const context = { console, Error };
 vm.createContext(context);
 vm.runInContext(source, context);
 const { findParagraphRange, AnchorNotFound } = context.DocsCoachGoogleApi;
@@ -58,6 +58,6 @@ test('no match above threshold throws AnchorNotFound', () => {
   ]);
   assert.throws(
     () => findParagraphRange(doc, 'Completely unrelated content here'),
-    AnchorNotFound,
+    { name: 'AnchorNotFound' },
   );
 });
