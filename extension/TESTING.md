@@ -104,3 +104,109 @@ freshly reloaded Google Doc.
 - Doc with **very long paragraph**: pin aligns to the vertical middle
   of the paragraph block; card position remains sane.
 - Window resize: pins reposition to the new gutter location.
+
+## Google Docs API features
+
+These tests cover the Insert / Post comment / Copy actions and the
+sign-in flow added in the 2026-05-12 Docs API round.
+
+Prereq: complete `docs/google-oauth-setup.md` so the manifest has a
+real OAuth client ID. Reload the extension at `chrome://extensions`
+after editing the manifest.
+
+### 11. Sign-in flow (first time)
+
+- Open the side panel. The auth row says **Not signed in** and the
+  button says **Sign in to Google**.
+- Click **Sign in to Google**.
+- Expected: a Google sign-in popup. After choosing the account you
+  added as a test user, you see **"Google hasn't verified this app."**
+  Click **Advanced → Continue (unsafe)**, then **Allow** on the
+  consent screen.
+- After the popup closes, the auth row shows your email and the
+  button changes to **Sign out**.
+- The Insert and Post comment buttons on any rendered card become
+  enabled.
+
+### 12. Sign-in flow (subsequent)
+
+- Close and reopen the side panel.
+- Expected: the auth row shows your email immediately (silent token
+  refresh).
+
+### 13. Sign out
+
+- Click **Sign out**.
+- Expected: auth row returns to **Not signed in**; Insert and Post
+  comment buttons become disabled with the tooltip "Sign in to
+  Google to use this." Copy stays enabled.
+
+### 14. Insert on a Kix-rendered doc
+
+- Toggle **Show suggestions as in-doc pins** OFF (so the side-panel
+  cards render — Insert isn't wired into the in-doc overlay card
+  this round).
+- Click **Review visible doc**.
+- On a suggestion card, click **Insert ↩**.
+- Expected: the targeted paragraph in the Google Doc is replaced
+  with the recommended revision text. Button briefly flashes
+  **Inserted ✓**, then returns to **Insert ↩**.
+- ⌘Z in the Google Doc reverts the change.
+
+### 15. Insert on a canvas-rendered doc
+
+- Use a Google Doc that doesn't expose `.kix-paragraphrenderer`
+  nodes — confirm in DevTools that
+  `document.querySelectorAll('.kix-paragraphrenderer').length === 0`.
+- Click **Review visible doc**.
+- The amber canvas banner shows; the card list renders below.
+- Click **Insert ↩** on a card.
+- Expected: the targeted paragraph is replaced. This is the core
+  feature of this round.
+
+### 16. Post comment
+
+- On any rendered card click **Post comment 💬**.
+- Expected: a Google comment appears in the doc's native comments
+  sidebar (the comments column on the right of the doc). The
+  comment's content is the suggestion title + recommended revision
+  + a "— Docs Coach" signature, and it is anchored to the targeted
+  paragraph (clicking the comment in the sidebar highlights that
+  paragraph).
+- The card button briefly flashes **Posted ✓**.
+
+### 17. Edited paragraph after review
+
+- Click **Review visible doc**.
+- In the Google Doc, edit the text of a paragraph that has a
+  suggestion (delete a few words at the start, for example).
+- On the side panel card for that paragraph, click **Insert ↩**.
+- Expected: the card status line shows "Couldn't locate this
+  paragraph in the doc — it may have been edited since the review.
+  Re-run Review."
+
+### 18. Doc you don't have edit access to
+
+- Open someone else's read-only Google Doc; ensure you can read it
+  but the toolbar shows **View only**.
+- Click **Review visible doc**, then **Insert ↩**.
+- Expected: card status: "Permissions missing — please sign out and
+  sign in again to re-grant access." (Drive returns 403 for a
+  read-only file; we treat that as the closest existing error.)
+
+### 19. Network offline
+
+- DevTools → Network → throttling → **Offline**.
+- Click **Insert ↩**.
+- Expected: card status shows the failed-fetch error message
+  ("Could not insert: …"). When you go back online the next Insert
+  click works.
+
+### 20. Copy fallback still works without sign-in
+
+- Sign out.
+- Click **Review visible doc** (works without auth; the API call
+  hits the public backend).
+- Click **Copy 📋** on any card.
+- Expected: button flashes **Copied ✓** and the recommended
+  revision is on the clipboard.
