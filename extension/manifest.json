@@ -7,12 +7,16 @@
   "permissions": [
     "activeTab",
     "storage",
-    "sidePanel"
+    "sidePanel",
+    "identity"
   ],
   "host_permissions": [
     "https://docs.google.com/document/*",
     "http://localhost:8000/*",
-    "https://*.up.railway.app/*"
+    "https://*.up.railway.app/*",
+    "https://docs.googleapis.com/*",
+    "https://www.googleapis.com/*",
+    "https://oauth2.googleapis.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -34,5 +38,12 @@
   },
   "action": {
     "default_title": "Open Docs Coach"
+  },
+  "oauth2": {
+    "client_id": "REPLACE_ME.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/documents",
+      "https://www.googleapis.com/auth/drive"
+    ]
   }
 }
