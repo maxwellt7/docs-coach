@@ -259,12 +259,12 @@ function flashButton(btn, label, holdMs) {
 
 async function resolveRange(suggestion) {
   if (!lastDocUrl) throw new Error('No doc context. Run Review first.');
-  const docId = Api.extractDocId(lastDocUrl);
-  const structure = await Api.fetchDocStructure(docId);
   const snippet = suggestion.anchor_snippet;
   if (!snippet) {
     throw new Api.AnchorNotFound('suggestion has no anchor_snippet');
   }
+  const docId = Api.extractDocId(lastDocUrl);
+  const structure = await Api.fetchDocStructure(docId);
   const range = Api.findParagraphRange(structure, snippet);
   return { docId, range };
 }
