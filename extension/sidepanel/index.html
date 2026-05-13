@@ -14,6 +14,11 @@
         <p class="lede">Review SOPs, contracts, policies, and operating docs with sequenced business-documentation lenses.</p>
       </header>
 
+      <section id="auth" class="auth">
+        <span id="authState" class="auth__state">Not signed in</span>
+        <button id="authButton" class="auth__btn">Sign in to Google</button>
+      </section>
+
       <label class="field">
         <span>API URL</span>
         <input id="apiUrl" value="http://localhost:8000" />
@@ -41,6 +46,7 @@
       <section id="summary" class="summary"></section>
       <section id="results" class="results" hidden></section>
     </main>
+    <script src="google-api.js"></script>
     <script src="panel.js"></script>
   </body>
 </html>

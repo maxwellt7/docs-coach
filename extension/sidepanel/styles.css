@@ -48,3 +48,70 @@ button:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 rgba(31,3
   color: #f7eed8;
   border-radius: 8px;
 }
+
+.auth {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 14px 0 4px;
+  padding: 8px 10px;
+  background: rgba(255,250,240,.78);
+  border: 1px solid rgba(31,36,29,.18);
+}
+
+.auth__state {
+  font-size: 12px;
+  color: #5d5a50;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth__btn {
+  font-size: 12px;
+  padding: 6px 10px;
+  box-shadow: none;
+}
+
+.card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  border-top: 1px solid rgba(31,36,29,.12);
+  padding-top: 10px;
+}
+
+.card__btn {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border: 1px solid rgba(31,36,29,.22);
+  background: #fffaf0;
+  color: #1f241d;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.card__btn--primary {
+  background: #1f241d;
+  color: #f5f1e8;
+  border-color: #1f241d;
+}
+
+.card__btn[disabled] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.card__status {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #5d5a50;
+}
+
+.card__status--error {
+  color: #9b2f25;
+}
