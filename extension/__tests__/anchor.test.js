@@ -61,3 +61,23 @@ test('no match above threshold throws AnchorNotFound', () => {
     { name: 'AnchorNotFound' },
   );
 });
+
+const { extractDocId } = context.DocsCoachGoogleApi;
+
+test('extractDocId returns the ID from a normal /edit URL', () => {
+  const id = extractDocId('https://docs.google.com/document/d/1abcXYZ_123/edit');
+  assert.equal(id, '1abcXYZ_123');
+});
+
+test('extractDocId returns the ID from a URL with query and fragment', () => {
+  const id = extractDocId('https://docs.google.com/document/d/foo-bar/edit?usp=sharing#heading=h.abc');
+  assert.equal(id, 'foo-bar');
+});
+
+test('extractDocId throws on a non-doc URL', () => {
+  assert.throws(() => extractDocId('https://example.com/foo'));
+});
+
+test('extractDocId throws on undefined input', () => {
+  assert.throws(() => extractDocId(undefined));
+});

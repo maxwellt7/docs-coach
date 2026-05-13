@@ -106,10 +106,88 @@
     return 1 - dp[m][n] / Math.max(m, n);
   }
 
+  // --- doc-id + auth helpers -------------------------------------------------
+
+  /**
+   * Extract a Google Doc's documentId from its URL.
+   * @returns {string} the document ID, or throws.
+   */
+  function extractDocId(url) {
+    if (typeof url !== 'string') throw new Error('Doc URL missing');
+    const m = url.match(/\/document\/d\/([^/?#]+)/);
+    if (!m) throw new Error('Not a Google Doc URL');
+    return m[1];
+  }
+
+  /**
+   * Wraps chrome.identity.getAuthToken in a Promise.
+   * @param {boolean} interactive - whether to prompt the user if no token.
+   * @returns {Promise<string|null>}
+   */
+  function getAuthToken(interactive) {
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.identity.getAuthToken({ interactive }, (token) => {
+          const err = chrome.runtime.lastError;
+          if (err) {
+            if (!interactive && /not signed in|user not signed in|OAuth2 not granted/i.test(err.message)) {
+              resolve(null);
+              return;
+            }
+            reject(new Error(err.message));
+            return;
+          }
+          resolve(token || null);
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  /**
+   * Revoke + remove the cached auth token. Resolves once both calls finish.
+   */
+  async function signOut() {
+    const token = await getAuthToken(false);
+    if (!token) return;
+    try {
+      await fetch(
+        'https://oauth2.googleapis.com/revoke?token=' + encodeURIComponent(token),
+        { method: 'POST' },
+      );
+    } catch (_) {
+      // Network failure is fine — we still drop the cache below.
+    }
+    await new Promise((resolve) => {
+      chrome.identity.removeCachedAuthToken({ token }, () => resolve());
+    });
+  }
+
+  /**
+   * Read the signed-in user's email via chrome.identity.getProfileUserInfo.
+   * @returns {Promise<string|null>}
+   */
+  function getUserEmail() {
+    return new Promise((resolve) => {
+      try {
+        chrome.identity.getProfileUserInfo({ accountStatus: 'ANY' }, (info) => {
+          resolve(info?.email || null);
+        });
+      } catch (_) {
+        resolve(null);
+      }
+    });
+  }
+
   // --- exports ---------------------------------------------------------------
 
   root.DocsCoachGoogleApi = {
     AnchorNotFound,
     findParagraphRange,
+    extractDocId,
+    getAuthToken,
+    signOut,
+    getUserEmail,
   };
 })(typeof window !== 'undefined' ? window : globalThis);
